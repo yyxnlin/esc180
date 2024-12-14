@@ -39,24 +39,32 @@ def cosine_similarity(vec1, vec2):
         magnitude_vec2 += num**2
     magnitude_vec2 = math.sqrt(magnitude_vec2)
 
-    res = numerator/(magnitude_vec1*magnitude_vec2)
+    prod = (magnitude_vec1*magnitude_vec2)
+
+    if prod == 0:
+        return -1
+    res = numerator/prod
 
     return res
 
-
+# input: must be a list of lists with distinct words
 def build_semantic_descriptors(sentences):
-    print (sentences)
     dict = {}
 
     for sentence in sentences:
-        for cur_word in sentence:
+        words = []
+        for word in sentence:
+            if word not in words:
+                words.append(word)
+        for cur_word in words:
             # word is not already in dictionary -> add it to dictionary
-            if (cur_word not in dict.keys()):
+            if cur_word not in dict.keys():
                 dict[cur_word] = {}
 
             # dict[word] is current semantic descriptor of the word
-            for search_word in sentence: # loop through sentence again
+            for search_word in words: # loop through sentence again
                 if search_word != cur_word: # different word than current word
+
                     if search_word in dict[cur_word]: # word 2 already in semantic descriptor of word
                         dict[cur_word][search_word] += 1
                     else:
@@ -67,6 +75,12 @@ def build_semantic_descriptors(sentences):
 def build_semantic_descriptors_from_files(filenames):
     res = []
     sentences = []
+    remove_str = " ,./;:-=_+"
+    remove_chars=[]
+
+    for ch in remove_str:
+        remove_chars.append(ch)
+
 
     for filename in filenames:
         file = open(filename, "r", encoding="latin1").read().lower().replace("\n", " ")
@@ -77,40 +91,36 @@ def build_semantic_descriptors_from_files(filenames):
                 start_ind = i+1
                 i += 1
 
-        # sentences.extend(re.split("[.?!]+", file))
-
     i = 0
     for sentence in sentences:
-        # print(sentence)
-        # sentence = sentence.lower()  # lowercase
-        # if 0 < i < 20:
-        # print(sentence + "\n\n\n")
-        # i+=1
-
         start_ind = 0
         words = []
 
         for i in range(len(sentence)):
-            if (sentence[i] == " " or sentence[i] == "\'" or sentence[i] == "," or sentence[i] == ";" or sentence[i] == " "):
-                if (i - start_ind > 1):
+            a = sentence[i]
+
+            # at last character of sentence 
+            if i == len(sentence) - 1:
+                ending = len(sentence)
+                # if last character is invalid character
+                if sentence[i] in remove_chars:
+                    ending = len(sentence) - 1
+
+                word = sentence[start_ind:ending]
+                words.append(word)
+
+            # not at last character and invalid character at current position
+            elif sentence[i] in remove_chars:
+                if i - start_ind > 1: # not an empty string in between
                     word = sentence[start_ind:i]
-
-                    exists = False
-
-                    for e in words:
-                        if word == e:
-                            exists = True
-                    if not exists:
-                        words.append(word)
+                    words.append(word)
                 start_ind = i+1
                 i += 1
 
         if (len(words) > 0):
             res.append(words)
-    
-    # print(res)
-    return build_semantic_descriptors(res)
 
+    return build_semantic_descriptors(res)
 
 
 def most_similar_word(word, choices, semantic_descriptors, similarity_fn):
@@ -120,11 +130,11 @@ def most_similar_word(word, choices, semantic_descriptors, similarity_fn):
 
     for choice in choices:
         if (word not in semantic_descriptors.keys()):
-            return "not"
+            break
         if (choice not in semantic_descriptors.keys()):
             continue
         sim = similarity_fn(semantic_descriptors[word], semantic_descriptors[choice])
-        print (word, choice, sim)
+
         if (sim > max):
             res = choice
             max = sim
@@ -145,40 +155,26 @@ def run_similarity_test(filename, semantic_descriptors, similarity_fn):
         choices = words[2:]
         res = most_similar_word(word, choices, semantic_descriptors, similarity_fn)
 
-        print(word + ", " + ans + ", " + res)
-
-        # if (ans != res):
-        #     print(semantic_descriptors[word])
-
         if (res == ans):
             num_correct += 1
         num_tests += 1
 
     return (num_correct/num_tests)
 
-list = [["i", "am", "a", "sick", "man"],
-["i", "am", "a", "spiteful", "man"],
-["i", "am", "an", "unattractive", "man"],
-["i", "believe", "my", "liver", "is", "diseased"],
-["however", "i", "know", "nothing", "at", "all", "about", "my",
-"disease", "and", "do", "not", "know", "for", "certain", "what", "ails", "me"]]
-
-
-list2 = [["i", "am", "a", "sick", "man"],
-["i", "am", "a", "spiteful", "man"],
-["i", "am", "an", "unattractive", "man"]]
 
 # print(cosine_similarity({"a": 1, "b": 2, "c": 3}, {"b": 4, "c": 5, "d": 6}))
 # print(build_semantic_descriptors(list2))
-# descriptors = build_semantic_descriptors_from_files(["warandpeace.txt", "swannsway.txt"])
-# descriptors = build_semantic_descriptors_from_files(["moderately-sized-file.txt"])
-descriptors = build_semantic_descriptors_from_files(["test2.txt"])
-# print(descriptors.keys())
-print (descriptors["one"])
+descriptors = build_semantic_descriptors_from_files(["warandpeace.txt", "swannsway.txt"])
+# slist = [['this', 'is', 'file', 'one'],
+#                     ['this', 'is', 'file', 'two'],
+#                     ['file', 'two', 'has', 'two', 'sentences'],
+#                     ['this', 'is', 'file', 'three'],
+#                     ['file', 'three', 'has', 'three', 'sentences'],
+#                     ['this', 'is', 'the', 'third', 'sentence']]
+# descriptors = build_semantic_descriptors(slist)
+# print(descriptors["file"])
+# for s in descriptors.items():
+#     print(s)
 
-# print(cosine_similarity(descriptors["watch"], descriptors["hear"]))
-# print(cosine_similarity(descriptors["watch"], descriptors["see"]))
-
-# print(most_similar_word("onsse", ["two", "see"], descriptors, cosine_similarity))
-# res = run_similarity_test("test.txt", descriptors, cosine_similarity)
-# print(res, "of the guesses were correct")
+res = run_similarity_test("test.txt", descriptors, cosine_similarity)
+print(res, "of the guesses were correct")
